@@ -1,4 +1,4 @@
-// app.js — minimal presigner
+// app.js — minimal S3 presigner for your ESP32
 import express from "express";
 import crypto from "node:crypto";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -10,8 +10,12 @@ app.use(express.json());
 const {
   AWS_REGION,
   BUCKET_NAME,
-  URL_TTL_SECONDS = "900",
+  URL_TTL_SECONDS = "900"
 } = process.env;
+
+if (!AWS_REGION || !BUCKET_NAME) {
+  console.warn("Missing env AWS_REGION or BUCKET_NAME — set them in Railway.");
+}
 
 const s3 = new S3Client({ region: AWS_REGION });
 
@@ -19,6 +23,7 @@ function sanitize(s, max = 64) {
   return String(s || "").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, max);
 }
 
+// GET /presign?device=devA&session=S42&seq=3
 app.get("/presign", async (req, res) => {
   try {
     const now = new Date().toISOString().replace(/[:.]/g, "-");
@@ -42,7 +47,8 @@ app.get("/presign", async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => res.send("ok"));
+// health check
+app.get("/", (_req, res) => res.send("ok"));
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("Presigner up on :" + port));
+app.listen(port, () => console.log(`Presigner up on :${port}`));
